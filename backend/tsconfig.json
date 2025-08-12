@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "target": "ES2020",               // Versión de JavaScript a la que se compilará
+      "module": "commonjs",             // Sistema de módulos (CommonJS es estándar para Node.js)
+      "outDir": "./dist",               // Carpeta de salida para los archivos compilados
+      "rootDir": "./src",               // Carpeta raíz del código fuente
+      "strict": true,                   // Habilita todas las verificaciones de tipo estrictas
+      "esModuleInterop": true,          // Permite la interoperabilidad entre módulos CommonJS y ES
+      "skipLibCheck": true,             // Omite la verificación de tipos en archivos de declaración (.d.ts)
+      "forceConsistentCasingInFileNames": true, // Asegura consistencia en mayúsculas/minúsculas en nombres de archivos
+      "moduleResolution": "node",       // Estrategia de resolución de módulos (necesario para Node.js)
+      "resolveJsonModule": true         // Permite importar archivos JSON como módulos
+    },
+    "include": ["src/**/*"],            // Incluye todos los archivos en la carpeta `src`
+    "exclude": ["node_modules", "dist"] // Excluye estas carpetas
+}

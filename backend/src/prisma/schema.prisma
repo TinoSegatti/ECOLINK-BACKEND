@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  id              Int       @id @default(autoincrement())
+  zona            String
+  nombre          String
+  barrio          String
+  direccion       String
+  localidad       String?    // Nuevo campo para localidad
+  telefono        String  @unique
+  tipoCliente     String
+  detalleDireccion String?
+  semana          String?
+  observaciones   String?
+  debe            Float?
+  fechaDeuda      String?
+  precio          Float?
+  ultimaRecoleccion String?
+  contratacion    String?
+  nuevo           Boolean   @default(true)
+  estadoTurno     String?
+  prioridad       String?
+  estado          String?
+  gestionComercial String?
+  CUIT            String?   // Campo para empresas
+  condicion       String?   // Campo para empresas (ej. Responsable Inscripto)
+  factura         String?   // Campo para empresas (ej. Tipo de factura)
+  pago            String?   // Campo para empresas (ej. Método de pago)
+  origenFacturacion String? // Campo para empresas
+  nombreEmpresa   String?   // Campo para empresas (razón social)
+  emailAdministracion String? // Campo para empresas
+  emailComercial  String?   // Campo para empresas
+  @@map("cliente")
+}
+
+model Categoria {
+  id        Int      @id @default(autoincrement())
+  campo     String
+  valor     String
+  color     String?
+  deleteAt  String?  // Fecha en formato dd/mm/aaaa, null si no está borrada
+  @@unique([campo, valor])
+  @@map("categoria")
+}
+
+// NUEVAS TABLAS PARA AUTENTICACIÓN
+model Usuario {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  password    String
+  nombre      String
+  rol         RolUsuario
+  activo      Boolean  @default(true)
+  verificado  Boolean  @default(false)
+  tokenVerificacion String? @unique // Token para verificar email
+  tokenExpiracion   DateTime? // Expiración del token
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relación con solicitudes de registro
+  solicitudesCreadas SolicitudRegistro[] @relation("AdminCreador")
+  
+  @@map("usuario")
+}
+
+model SolicitudRegistro {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  nombre      String
+  rol         RolUsuario
+  tokenVerificacion String @unique
+  aprobada    Boolean  @default(false)
+  rechazada   Boolean  @default(false)
+  motivoRechazo String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relación con el admin que aprueba/rechaza
+  adminId     Int?
+  admin       Usuario? @relation("AdminCreador", fields: [adminId], references: [id])
+  
+  @@map("solicitud_registro")
+}
+
+enum RolUsuario {
+  ADMIN
+  OPERADOR
+  LECTOR
+}
