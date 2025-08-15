@@ -90,9 +90,8 @@ app.use((req: express.Request, res: express.Response) => {
 // Middleware
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || 'https://front-ecolink.vercel.app',
-    'https://front-ecolink-djz2r5l8n-tinosegattis-projects.vercel.app',
-    'http://localhost:3000',
+    process.env.FRONTEND_URL || 'https://ecolink-frontend-desarrollo.vercel.app',
+    
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
