@@ -82,3 +82,7 @@ export const requireRole = (rolesPermitidos: RolUsuario[]) => {
 export const requireAdmin = requireRole([RolUsuario.ADMIN])
 export const requireOperadorOrAdmin = requireRole([RolUsuario.ADMIN, RolUsuario.OPERADOR])
 export const requireAnyRole = requireRole([RolUsuario.ADMIN, RolUsuario.OPERADOR, RolUsuario.LECTOR])
+
+// Alias para compatibilidad con las rutas existentes
+export const verificarToken = authenticateToken
+export const verificarRolAdmin = requireAdmin
