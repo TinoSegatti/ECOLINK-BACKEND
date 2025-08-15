@@ -11,6 +11,7 @@ import {
   perfilHandler,
   resetPasswordHandler,
   confirmResetPasswordHandler,
+  verificarSolicitudHandler, // NUEVA IMPORTACIÓN
 } from "../controllers/authController"
 import { authenticateToken, requireAdmin } from "../middleware/authMiddleware"
 
@@ -20,6 +21,7 @@ const router = express.Router()
 router.post("/auth/login", loginHandler)
 router.post("/auth/registro", registroHandler)
 router.get("/auth/verificar-email", verificarEmailHandler)
+router.get("/auth/verificar-solicitud", verificarSolicitudHandler) // NUEVA RUTA
 router.post("/auth/reenviar-verificacion", reenviarVerificacionHandler)
 router.post("/auth/reset-password", resetPasswordHandler) // NUEVA RUTA
 router.post("/auth/reset-password/confirm", confirmResetPasswordHandler) // NUEVA RUTA

@@ -7,6 +7,7 @@ import {
   rechazarSolicitud,
   verificarEmail,
   reenviarVerificacion,
+  verificarEmailSolicitud, // NUEVA IMPORTACIÓN
 } from "../services/authService"
 import { solicitarRestablecimientoContrasena, confirmarRestablecimientoContrasena } from "../services/authService"
 import { RolUsuario } from "@prisma/client"
@@ -175,7 +176,7 @@ export const aprobarSolicitudHandler = async (req: Request, res: Response): Prom
 
     const usuario = await aprobarSolicitud(solicitudId, adminId, password)
     res.json({
-      message: "Solicitud aprobada exitosamente. Se ha enviado un email de verificación al usuario.",
+      message: "Solicitud aprobada exitosamente. El usuario ya puede iniciar sesión con su email y la contraseña asignada.",
       usuario,
     })
   } catch (error: any) {
@@ -183,7 +184,8 @@ export const aprobarSolicitudHandler = async (req: Request, res: Response): Prom
     if (
       error.message === "Solicitud no encontrada" ||
       error.message === "Solicitud ya procesada" ||
-      error.message === "Ya existe un usuario registrado con este email"
+      error.message === "Ya existe un usuario registrado con este email" ||
+      error.message === "El email de la solicitud debe estar verificado antes de aprobar" // NUEVO ERROR
     ) {
       res.status(400).json({
         errors: [{ field: "general", message: error.message }],
@@ -291,5 +293,35 @@ export const confirmResetPasswordHandler = async (req: Request, res: Response): 
     })
   }
 }
+
+// NUEVO CONTROLADOR: Verificar email de solicitud
+export const verificarSolicitudHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.query;
+
+    if (!token || typeof token !== "string") {
+      res.status(400).json({
+        errors: [{ field: "token", message: "Token de verificación requerido" }],
+      });
+      return;
+    }
+
+    const resultado = await verificarEmailSolicitud(token);
+    res.json(resultado);
+  } catch (error: any) {
+    console.error("Error al verificar email de solicitud:", error);
+    if (
+      error.message === "Token de verificación inválido o solicitud ya procesada"
+    ) {
+      res.status(400).json({
+        errors: [{ field: "token", message: error.message }],
+      });
+      return;
+    }
+    res.status(500).json({
+      errors: [{ field: "general", message: "Error interno del servidor" }],
+    });
+  }
+};
 
 

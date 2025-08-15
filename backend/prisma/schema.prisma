@@ -81,6 +81,7 @@ model SolicitudRegistro {
   nombre            String
   rol               RolUsuario
   tokenVerificacion String    @unique
+  emailVerificado   Boolean   @default(false) // NUEVO CAMPO: indica si el email fue verificado
   aprobada          Boolean   @default(false)
   rechazada         Boolean   @default(false)
   motivoRechazo     String?
