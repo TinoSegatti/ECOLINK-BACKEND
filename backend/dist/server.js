@@ -8,6 +8,7 @@ const express_1 = __importDefault(require("express"));
 const clienteRoutes_1 = __importDefault(require("./routes/clienteRoutes"));
 const categoriaRoutes_1 = __importDefault(require("./routes/categoriaRoutes"));
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
+const usuarioRoutes_1 = __importDefault(require("./routes/usuarioRoutes"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 // Cargar variables de entorno desde .env
@@ -31,6 +32,7 @@ console.log("🚀 Configurando rutas...");
 app.use("/api", authRoutes_1.default); // Rutas de autenticación
 app.use("/api", clienteRoutes_1.default);
 app.use("/api", categoriaRoutes_1.default);
+app.use("/api", usuarioRoutes_1.default);
 // Ruta de prueba para verificar que el servidor está funcionando
 app.get("/", (req, res) => {
     res.json({
@@ -40,6 +42,7 @@ app.get("/", (req, res) => {
             auth: "/api/auth/*",
             clientes: "/api/clientes",
             categorias: "/api/categorias",
+            usuarios: "/api/usuarios",
         },
     });
 });
@@ -79,9 +82,7 @@ app.use((req, res) => {
 // Middleware
 app.use((0, cors_1.default)({
     origin: [
-        process.env.FRONTEND_URL || 'https://front-ecolink.vercel.app',
-        'https://front-ecolink-djz2r5l8n-tinosegattis-projects.vercel.app',
-        'http://localhost:3000',
+        process.env.FRONTEND_URL || 'https://ecolink-frontend-desarrollo.vercel.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

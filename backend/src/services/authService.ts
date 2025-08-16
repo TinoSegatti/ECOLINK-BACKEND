@@ -492,24 +492,24 @@ export const rechazarSolicitud = async (solicitudId: number, adminId: number, mo
   }
 }
 
-// Obtener usuario por ID
-export const obtenerUsuarioPorId = async (id: number): Promise<Omit<Usuario, "password"> | null> => {
-  try {
-    const usuario = await prisma.usuario.findUnique({
-      where: { id },
-    })
+// Obtener usuario por ID - MOVIDO A UsuarioService
+// export const obtenerUsuarioPorId = async (id: number): Promise<Omit<Usuario, "password"> | null> => {
+//   try {
+//     const usuario = await prisma.usuario.findUnique({
+//       where: { id },
+//     })
 
-    if (!usuario) {
-      return null
-    }
+//     if (!usuario) {
+//       return null
+//     }
 
-    const { password, ...usuarioSinPassword } = usuario
-    return usuarioSinPassword
-  } catch (error: any) {
-    console.error("Error al obtener usuario:", error)
-    throw error
-  }
-}
+//     const { password, ...usuarioSinPassword } = usuario
+//     return usuarioSinPassword
+//   } catch (error: any) {
+//     console.error("Error al obtener usuario:", error)
+//     throw error
+//   }
+// }
 const enviarEmailRestablecimiento = async (email: string, nombre: string, token: string): Promise<void> => {
   try {
     console.log(`📧 Preparando email de restablecimiento para: ${email}`)
@@ -633,30 +633,30 @@ export const confirmarRestablecimientoContrasena = async (
     throw error
   }
 }
-// Actualizar perfil de usuario
-export const actualizarPerfilUsuario = async (
-  userId: number,
-  data: { nombre: string },
-): Promise<Omit<Usuario, "password">> => {
-  try {
-    console.log("actualizarPerfilUsuario: Actualizando usuario ID:", userId, "con datos:", data)
+// Actualizar perfil de usuario - MOVIDO A UsuarioService
+// export const actualizarPerfilUsuario = async (
+//   userId: number,
+//   data: { nombre: string },
+// ): Promise<Omit<Usuario, "password">> => {
+//   try {
+//     console.log("actualizarPerfilUsuario: Actualizando usuario ID:", userId, "con datos:", data)
 
-    const usuarioActualizado = await prisma.usuario.update({
-      where: { id: userId },
-      data: {
-        nombre: data.nombre,
-        updatedAt: new Date(),
-      },
-    })
+//     const usuarioActualizado = await prisma.usuario.update({
+//       where: { id: userId },
+//       data: {
+//         nombre: data.nombre,
+//         updatedAt: new Date(),
+//       },
+//     })
 
-    console.log("Usuario actualizado en BD:", usuarioActualizado)
-    const { password, ...usuarioSinPassword } = usuarioActualizado
-    return usuarioSinPassword
-  } catch (error: any) {
-    console.error("Error al actualizar perfil en BD:", error)
-    throw error
-  }
-}
+//     console.log("Usuario actualizado en BD:", usuarioActualizado)
+//     const { password, ...usuarioSinPassword } = usuarioActualizado
+//     return usuarioSinPassword
+//   } catch (error: any) {
+//     console.error("Error al actualizar perfil en BD:", error)
+//     throw error
+//   }
+// }
 
 // NUEVA FUNCIÓN: Verificar email de solicitud (no de usuario)
 export const verificarEmailSolicitud = async (

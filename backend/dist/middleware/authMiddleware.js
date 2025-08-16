@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireAnyRole = exports.requireOperadorOrAdmin = exports.requireAdmin = exports.requireRole = exports.authenticateToken = void 0;
+exports.verificarRolAdmin = exports.verificarToken = exports.requireAnyRole = exports.requireOperadorOrAdmin = exports.requireAdmin = exports.requireRole = exports.authenticateToken = void 0;
 const authService_1 = require("../services/authService");
+const usuarioService_1 = require("../services/usuarioService");
 const client_1 = require("@prisma/client");
 // Middleware de autenticación
 const authenticateToken = async (req, res, next) => {
@@ -19,7 +20,7 @@ const authenticateToken = async (req, res, next) => {
         const decoded = (0, authService_1.verifyToken)(token);
         console.log("authenticateToken: Token decodificado:", decoded);
         // Verificar que el usuario aún existe y está activo
-        const usuario = await (0, authService_1.obtenerUsuarioPorId)(decoded.userId);
+        const usuario = await (0, usuarioService_1.obtenerUsuarioPorId)(decoded.userId);
         console.log("authenticateToken: Usuario encontrado:", !!usuario);
         if (!usuario || !usuario.activo) {
             console.log("authenticateToken: Usuario no válido o inactivo");
@@ -63,3 +64,6 @@ exports.requireRole = requireRole;
 exports.requireAdmin = (0, exports.requireRole)([client_1.RolUsuario.ADMIN]);
 exports.requireOperadorOrAdmin = (0, exports.requireRole)([client_1.RolUsuario.ADMIN, client_1.RolUsuario.OPERADOR]);
 exports.requireAnyRole = (0, exports.requireRole)([client_1.RolUsuario.ADMIN, client_1.RolUsuario.OPERADOR, client_1.RolUsuario.LECTOR]);
+// Alias para compatibilidad con las rutas existentes
+exports.verificarToken = exports.authenticateToken;
+exports.verificarRolAdmin = exports.requireAdmin;

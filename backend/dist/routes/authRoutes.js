@@ -12,6 +12,7 @@ const router = express_1.default.Router();
 router.post("/auth/login", authController_1.loginHandler);
 router.post("/auth/registro", authController_1.registroHandler);
 router.get("/auth/verificar-email", authController_1.verificarEmailHandler);
+router.get("/auth/verificar-solicitud", authController_1.verificarSolicitudHandler); // NUEVA RUTA
 router.post("/auth/reenviar-verificacion", authController_1.reenviarVerificacionHandler);
 router.post("/auth/reset-password", authController_1.resetPasswordHandler); // NUEVA RUTA
 router.post("/auth/reset-password/confirm", authController_1.confirmResetPasswordHandler); // NUEVA RUTA

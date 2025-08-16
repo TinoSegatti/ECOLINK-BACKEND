@@ -13,6 +13,8 @@ router.use(authMiddleware_1.authenticateToken);
 router.post("/clientes", authMiddleware_1.requireOperadorOrAdmin, clienteController_1.crearClienteHandler);
 router.put("/clientes/:id", authMiddleware_1.requireOperadorOrAdmin, clienteController_1.actualizarClienteHandler);
 router.delete("/clientes/:id", authMiddleware_1.requireOperadorOrAdmin, clienteController_1.eliminarClienteHandler);
+// Ruta para actualizar precios (solo ADMIN)
+router.post("/clientes/actualizar-precios", authMiddleware_1.requireAdmin, clienteController_1.actualizarPreciosHandler);
 // Rutas que permiten cualquier rol autenticado (leer)
 router.get("/clientes", authMiddleware_1.requireAnyRole, clienteController_1.obtenerClientesHandler);
 router.get("/clientes/:id", authMiddleware_1.requireAnyRole, clienteController_1.obtenerClientePorIdHandler);

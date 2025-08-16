@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.eliminarClienteHandler = exports.obtenerClientePorIdHandler = exports.obtenerClientesHandler = exports.actualizarClienteHandler = exports.crearClienteHandler = void 0;
+exports.actualizarPreciosHandler = exports.eliminarClienteHandler = exports.obtenerClientePorIdHandler = exports.obtenerClientesHandler = exports.actualizarClienteHandler = exports.crearClienteHandler = void 0;
 const clienteService_1 = require("../services/clienteService");
 const clienteValidator_1 = require("../validators/clienteValidator");
 const zod_1 = require("zod");
@@ -108,3 +108,30 @@ const eliminarClienteHandler = async (req, res) => {
     }
 };
 exports.eliminarClienteHandler = eliminarClienteHandler;
+const actualizarPreciosHandler = async (req, res) => {
+    try {
+        const ActualizarPreciosSchema = zod_1.z.object({
+            tipoCliente: zod_1.z.string().min(1, "El tipo de cliente es requerido"),
+            nuevoPrecio: zod_1.z.number().min(0, "El nuevo precio debe ser un número positivo"),
+        });
+        const { tipoCliente, nuevoPrecio } = ActualizarPreciosSchema.parse(req.body);
+        const clientesActualizados = await (0, clienteService_1.actualizarPreciosPorTipoCliente)(tipoCliente, nuevoPrecio);
+        res.status(200).json({
+            message: `Precios actualizados para ${clientesActualizados.count} clientes del tipo ${tipoCliente}`,
+            count: clientesActualizados.count,
+        });
+    }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            const errors = error.errors.map(e => ({
+                field: e.path.join('.'),
+                message: e.message,
+            }));
+            res.status(400).json({ errors });
+            return;
+        }
+        console.error('Error al actualizar precios:', error);
+        res.status(500).json({ error: 'Error al actualizar precios' });
+    }
+};
+exports.actualizarPreciosHandler = actualizarPreciosHandler;

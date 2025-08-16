@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.actualizarPerfilUsuario = exports.confirmarRestablecimientoContrasena = exports.solicitarRestablecimientoContrasena = exports.obtenerUsuarioPorId = exports.rechazarSolicitud = exports.reenviarVerificacion = exports.verificarEmail = exports.aprobarSolicitud = exports.obtenerSolicitudesPendientes = exports.crearSolicitudRegistro = exports.loginUsuario = exports.verifyToken = exports.generateToken = void 0;
+exports.verificarEmailSolicitud = exports.confirmarRestablecimientoContrasena = exports.solicitarRestablecimientoContrasena = exports.rechazarSolicitud = exports.reenviarVerificacion = exports.verificarEmail = exports.aprobarSolicitud = exports.obtenerSolicitudesPendientes = exports.crearSolicitudRegistro = exports.loginUsuario = exports.verifyToken = exports.generateToken = void 0;
 const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -161,6 +161,15 @@ const crearSolicitudRegistro = async (data) => {
                 tokenVerificacion,
             },
         });
+        // ENVIAR EMAIL DE VERIFICACIÓN INMEDIATAMENTE
+        try {
+            await enviarEmailVerificacionSolicitud(data.email, data.nombre, tokenVerificacion);
+            console.log(`📧 Email de verificación de solicitud enviado a: ${data.email}`);
+        }
+        catch (emailError) {
+            console.error("❌ Error al enviar email de verificación de solicitud:", emailError);
+            // No lanzar error aquí, solo loguear. La solicitud se creó correctamente
+        }
         return solicitud;
     }
     catch (error) {
@@ -189,7 +198,7 @@ const obtenerSolicitudesPendientes = async () => {
     }
 };
 exports.obtenerSolicitudesPendientes = obtenerSolicitudesPendientes;
-// Aprobar solicitud (solo para ADMIN) - CON MANEJO MEJORADO DE ERRORES
+// Aprobar solicitud (solo para ADMIN) - MODIFICADO PARA NUEVO FLUJO
 const aprobarSolicitud = async (solicitudId, adminId, password) => {
     try {
         console.log(`🔍 Buscando solicitud ID: ${solicitudId}`);
@@ -208,6 +217,10 @@ const aprobarSolicitud = async (solicitudId, adminId, password) => {
         if (solicitud.aprobada || solicitud.rechazada) {
             throw new Error("Solicitud ya procesada");
         }
+        // VERIFICAR QUE EL EMAIL YA HAYA SIDO VERIFICADO
+        if (!solicitud.emailVerificado) {
+            throw new Error("El email de la solicitud debe estar verificado antes de aprobar");
+        }
         const usuarioExistente = await prisma.usuario.findUnique({
             where: { email: solicitud.email },
         });
@@ -215,10 +228,6 @@ const aprobarSolicitud = async (solicitudId, adminId, password) => {
             throw new Error("Ya existe un usuario registrado con este email");
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        const tokenVerificacion = crypto_1.default.randomBytes(32).toString("hex");
-        const tokenExpiracion = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        console.log(`🔑 Token de verificación generado: ${tokenVerificacion}`);
-        console.log(`⏰ Token expira en: ${tokenExpiracion}`);
         console.log(`👤 Creando usuario para: ${solicitud.email}`);
         const resultado = await prisma.$transaction(async (tx) => {
             const nuevoUsuario = await tx.usuario.create({
@@ -227,24 +236,16 @@ const aprobarSolicitud = async (solicitudId, adminId, password) => {
                     nombre: solicitud.nombre,
                     rol: solicitud.rol,
                     password: hashedPassword,
-                    verificado: false,
-                    tokenVerificacion,
-                    tokenExpiracion,
+                    verificado: true, // Ya está verificado por email
+                    tokenVerificacion: null, // No necesita token de verificación
+                    tokenExpiracion: null,
                 },
             });
             console.log(`✅ Usuario creado en BD:`, {
                 id: nuevoUsuario.id,
                 email: nuevoUsuario.email,
                 verificado: nuevoUsuario.verificado,
-                tokenVerificacion: nuevoUsuario.tokenVerificacion,
-                tokenExpiracion: nuevoUsuario.tokenExpiracion,
             });
-            // Verificar que el token se guardó correctamente
-            const usuarioGuardado = await tx.usuario.findUnique({
-                where: { id: nuevoUsuario.id },
-                select: { tokenVerificacion: true },
-            });
-            console.log(`🔍 Token almacenado en BD: ${usuarioGuardado?.tokenVerificacion}`);
             await tx.solicitudRegistro.update({
                 where: { id: solicitudId },
                 data: {
@@ -255,15 +256,6 @@ const aprobarSolicitud = async (solicitudId, adminId, password) => {
             return nuevoUsuario;
         });
         console.log(`✅ Usuario creado exitosamente: ${resultado.email}`);
-        // Enviar email de verificación
-        try {
-            await enviarEmailVerificacion(resultado.email, resultado.nombre, tokenVerificacion);
-            console.log(`📧 Email de verificación enviado exitosamente`);
-        }
-        catch (emailError) {
-            console.error("❌ Error al enviar email, pero usuario ya fue creado:", emailError);
-            throw new Error(`Usuario creado pero falló el envío del email: ${emailError instanceof Error ? emailError.message : "Error desconocido"}`);
-        }
         const { password: _, ...usuarioSinPassword } = resultado;
         return usuarioSinPassword;
     }
@@ -430,24 +422,22 @@ const rechazarSolicitud = async (solicitudId, adminId, motivo) => {
     }
 };
 exports.rechazarSolicitud = rechazarSolicitud;
-// Obtener usuario por ID
-const obtenerUsuarioPorId = async (id) => {
-    try {
-        const usuario = await prisma.usuario.findUnique({
-            where: { id },
-        });
-        if (!usuario) {
-            return null;
-        }
-        const { password, ...usuarioSinPassword } = usuario;
-        return usuarioSinPassword;
-    }
-    catch (error) {
-        console.error("Error al obtener usuario:", error);
-        throw error;
-    }
-};
-exports.obtenerUsuarioPorId = obtenerUsuarioPorId;
+// Obtener usuario por ID - MOVIDO A UsuarioService
+// export const obtenerUsuarioPorId = async (id: number): Promise<Omit<Usuario, "password"> | null> => {
+//   try {
+//     const usuario = await prisma.usuario.findUnique({
+//       where: { id },
+//     })
+//     if (!usuario) {
+//       return null
+//     }
+//     const { password, ...usuarioSinPassword } = usuario
+//     return usuarioSinPassword
+//   } catch (error: any) {
+//     console.error("Error al obtener usuario:", error)
+//     throw error
+//   }
+// }
 const enviarEmailRestablecimiento = async (email, nombre, token) => {
     try {
         console.log(`📧 Preparando email de restablecimiento para: ${email}`);
@@ -554,24 +544,111 @@ const confirmarRestablecimientoContrasena = async (token, newPassword) => {
     }
 };
 exports.confirmarRestablecimientoContrasena = confirmarRestablecimientoContrasena;
-// Actualizar perfil de usuario
-const actualizarPerfilUsuario = async (userId, data) => {
+// Actualizar perfil de usuario - MOVIDO A UsuarioService
+// export const actualizarPerfilUsuario = async (
+//   userId: number,
+//   data: { nombre: string },
+// ): Promise<Omit<Usuario, "password">> => {
+//   try {
+//     console.log("actualizarPerfilUsuario: Actualizando usuario ID:", userId, "con datos:", data)
+//     const usuarioActualizado = await prisma.usuario.update({
+//       where: { id: userId },
+//       data: {
+//         nombre: data.nombre,
+//         updatedAt: new Date(),
+//       },
+//     })
+//     console.log("Usuario actualizado en BD:", usuarioActualizado)
+//     const { password, ...usuarioSinPassword } = usuarioActualizado
+//     return usuarioSinPassword
+//   } catch (error: any) {
+//     console.error("Error al actualizar perfil en BD:", error)
+//     throw error
+//   }
+// }
+// NUEVA FUNCIÓN: Verificar email de solicitud (no de usuario)
+const verificarEmailSolicitud = async (token) => {
     try {
-        console.log("actualizarPerfilUsuario: Actualizando usuario ID:", userId, "con datos:", data);
-        const usuarioActualizado = await prisma.usuario.update({
-            where: { id: userId },
-            data: {
-                nombre: data.nombre,
-                updatedAt: new Date(),
+        console.log(`🔍 Verificando token de solicitud: ${token}`);
+        const solicitud = await prisma.solicitudRegistro.findFirst({
+            where: {
+                tokenVerificacion: token,
+                aprobada: false,
+                rechazada: false,
             },
         });
-        console.log("Usuario actualizado en BD:", usuarioActualizado);
-        const { password, ...usuarioSinPassword } = usuarioActualizado;
-        return usuarioSinPassword;
+        if (!solicitud) {
+            throw new Error("Token de verificación inválido o solicitud ya procesada");
+        }
+        console.log(`✅ Solicitud encontrada, marcando email como verificado`);
+        const solicitudActualizada = await prisma.solicitudRegistro.update({
+            where: { id: solicitud.id },
+            data: {
+                emailVerificado: true,
+                tokenVerificacion: "", // Limpiar token ya usado (usar string vacío para evitar error de tipo)
+            },
+        });
+        console.log(`✅ Email de solicitud verificado exitosamente:`, {
+            id: solicitudActualizada.id,
+            email: solicitudActualizada.email,
+            emailVerificado: solicitudActualizada.emailVerificado,
+        });
+        return {
+            solicitud: solicitudActualizada,
+            message: "Email verificado exitosamente. Tu solicitud está pendiente de aprobación por el administrador.",
+        };
     }
     catch (error) {
-        console.error("Error al actualizar perfil en BD:", error);
+        console.error("❌ Error al verificar email de solicitud:", error);
         throw error;
     }
 };
-exports.actualizarPerfilUsuario = actualizarPerfilUsuario;
+exports.verificarEmailSolicitud = verificarEmailSolicitud;
+// NUEVA FUNCIÓN: Enviar email de verificación de solicitud
+const enviarEmailVerificacionSolicitud = async (email, nombre, token) => {
+    try {
+        console.log(`📧 Preparando email de verificación de solicitud para: ${email}`);
+        const transporter = createTransport();
+        const verificationUrl = `${process.env.FRONTEND_URL || "http://localhost:3001"}/verificar-solicitud?token=${token}`;
+        console.log(`🔗 URL de verificación de solicitud generada: ${verificationUrl}`);
+        const mailOptions = {
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: email,
+            subject: "Verificación de Solicitud de Registro - ECOLINK",
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #7ac943;">¡Solicitud de Registro Recibida!</h2>
+          <p>Hola <strong>${nombre}</strong>,</p>
+          <p>Hemos recibido tu solicitud de registro en ECOLINK. Para continuar con el proceso, necesitas verificar tu dirección de correo electrónico.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationUrl}" 
+               style="background-color: #7ac943; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px;">
+              Verificar mi Email
+            </a>
+          </div>
+          <p><strong>Importante:</strong> Este enlace expirará en 24 horas por seguridad.</p>
+          <p>Una vez verificado tu email, tu solicitud será revisada por un administrador quien te asignará una contraseña.</p>
+          <p>Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:</p>
+          <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #666; font-size: 12px;">
+            Si no solicitaste este registro, puedes ignorar este email.
+          </p>
+        </div>
+      `,
+        };
+        console.log(`📤 Enviando email de verificación de solicitud a: ${email}`);
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Email de verificación de solicitud enviado exitosamente a: ${email}`);
+    }
+    catch (error) {
+        console.error("❌ Error detallado al enviar email de verificación de solicitud:", error);
+        if (error instanceof Error) {
+            if (error.message.includes("Missing credentials") || error.message.includes("EAUTH")) {
+                throw new Error("Error de configuración SMTP. Verifica las credenciales de email en las variables de entorno.");
+            }
+            throw new Error(`Error al enviar email: ${error.message}`);
+        }
+        throw new Error("Error desconocido al enviar email de verificación de solicitud");
+    }
+};

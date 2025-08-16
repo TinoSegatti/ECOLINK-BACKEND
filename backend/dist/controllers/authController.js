@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.confirmResetPasswordHandler = exports.resetPasswordHandler = exports.perfilHandler = exports.rechazarSolicitudHandler = exports.aprobarSolicitudHandler = exports.obtenerSolicitudesHandler = exports.reenviarVerificacionHandler = exports.verificarEmailHandler = exports.registroHandler = exports.loginHandler = void 0;
+exports.verificarSolicitudHandler = exports.confirmResetPasswordHandler = exports.resetPasswordHandler = exports.perfilHandler = exports.rechazarSolicitudHandler = exports.aprobarSolicitudHandler = exports.obtenerSolicitudesHandler = exports.reenviarVerificacionHandler = exports.verificarEmailHandler = exports.registroHandler = exports.loginHandler = void 0;
 const authService_1 = require("../services/authService");
 const authService_2 = require("../services/authService");
 const client_1 = require("@prisma/client");
@@ -155,7 +155,7 @@ const aprobarSolicitudHandler = async (req, res) => {
         }
         const usuario = await (0, authService_1.aprobarSolicitud)(solicitudId, adminId, password);
         res.json({
-            message: "Solicitud aprobada exitosamente. Se ha enviado un email de verificación al usuario.",
+            message: "Solicitud aprobada exitosamente. El usuario ya puede iniciar sesión con su email y la contraseña asignada.",
             usuario,
         });
     }
@@ -163,7 +163,9 @@ const aprobarSolicitudHandler = async (req, res) => {
         console.error("Error al aprobar solicitud:", error);
         if (error.message === "Solicitud no encontrada" ||
             error.message === "Solicitud ya procesada" ||
-            error.message === "Ya existe un usuario registrado con este email") {
+            error.message === "Ya existe un usuario registrado con este email" ||
+            error.message === "El email de la solicitud debe estar verificado antes de aprobar" // NUEVO ERROR
+        ) {
             res.status(400).json({
                 errors: [{ field: "general", message: error.message }],
             });
@@ -269,3 +271,30 @@ const confirmResetPasswordHandler = async (req, res) => {
     }
 };
 exports.confirmResetPasswordHandler = confirmResetPasswordHandler;
+// NUEVO CONTROLADOR: Verificar email de solicitud
+const verificarSolicitudHandler = async (req, res) => {
+    try {
+        const { token } = req.query;
+        if (!token || typeof token !== "string") {
+            res.status(400).json({
+                errors: [{ field: "token", message: "Token de verificación requerido" }],
+            });
+            return;
+        }
+        const resultado = await (0, authService_1.verificarEmailSolicitud)(token);
+        res.json(resultado);
+    }
+    catch (error) {
+        console.error("Error al verificar email de solicitud:", error);
+        if (error.message === "Token de verificación inválido o solicitud ya procesada") {
+            res.status(400).json({
+                errors: [{ field: "token", message: error.message }],
+            });
+            return;
+        }
+        res.status(500).json({
+            errors: [{ field: "general", message: "Error interno del servidor" }],
+        });
+    }
+};
+exports.verificarSolicitudHandler = verificarSolicitudHandler;

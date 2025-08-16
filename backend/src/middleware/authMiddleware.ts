@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express"
-import { verifyToken, obtenerUsuarioPorId } from "../services/authService"
+import { verifyToken } from "../services/authService"
+import { obtenerUsuarioPorId } from "../services/usuarioService"
 import { RolUsuario } from "@prisma/client"
 
 // Extender el tipo Request para incluir usuario
