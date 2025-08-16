@@ -19,14 +19,14 @@ router.use(debugToken)
 // Obtener todos los usuarios (solo admin)
 router.get('/', authenticateToken, requireAdmin, obtenerUsuarios)
 
-// Obtener estadísticas de usuarios (solo admin)
+// Obtener estadísticas de usuarios (solo admin) - DEBE IR ANTES QUE /:id
 router.get('/estadisticas', authenticateToken, requireAdmin, obtenerEstadisticasUsuarios)
-
-// Obtener usuario por ID (solo admin)
-router.get('/:id', authenticateToken, requireAdmin, obtenerUsuarioPorId)
 
 // Crear nuevo usuario (solo admin)
 router.post('/', authenticateToken, requireAdmin, crearUsuario)
+
+// Obtener usuario por ID (solo admin) - DEBE IR DESPUÉS DE LAS RUTAS ESPECÍFICAS
+router.get('/:id', authenticateToken, requireAdmin, obtenerUsuarioPorId)
 
 // Actualizar usuario (solo admin)
 router.put('/:id', authenticateToken, requireAdmin, actualizarUsuario)
