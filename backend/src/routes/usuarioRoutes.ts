@@ -9,8 +9,12 @@ import {
   obtenerEstadisticasUsuarios
 } from '../controllers/usuarioController'
 import { authenticateToken, requireAdmin } from '../middleware/authMiddleware'
+import { debugToken } from '../middleware/debugMiddleware'
 
 const router = express.Router()
+
+// Middleware de debug temporal (remover después de resolver el problema)
+router.use(debugToken)
 
 // Obtener todos los usuarios (solo admin)
 router.get('/', authenticateToken, requireAdmin, obtenerUsuarios)
