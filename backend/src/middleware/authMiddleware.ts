@@ -50,6 +50,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
     req.usuario = decoded
     console.log('✅ authenticateToken: Usuario autenticado exitosamente')
+    console.log('🔍 authenticateToken: Continuando a la siguiente función...')
     next()
   } catch (error: any) {
     console.error("❌ Error en autenticación:", error)

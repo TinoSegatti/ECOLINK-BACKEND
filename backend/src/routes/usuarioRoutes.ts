@@ -15,13 +15,18 @@ const router = express.Router()
 // Aplicar autenticación y autorización a todas las rutas
 router.use(authenticateToken, requireAdmin)
 
-// Rutas de usuarios
+// IMPORTANTE: Las rutas específicas DEBEN ir ANTES que las genéricas con parámetros
+// Rutas específicas primero
 router.get('/', obtenerUsuarios)
 router.get('/estadisticas', obtenerEstadisticasUsuarios)
-router.post('/', crearUsuario)
+
+// Rutas con parámetros después
 router.get('/:id', obtenerUsuarioPorId)
 router.put('/:id', actualizarUsuario)
 router.patch('/:id/estado', cambiarEstadoUsuario)
 router.delete('/:id', eliminarUsuario)
+
+// Rutas POST (sin parámetros) pueden ir en cualquier lugar
+router.post('/', crearUsuario)
 
 export default router
