@@ -16,58 +16,32 @@ declare global {
   }
 }
 
-// Middleware de autenticación
+// Middleware de autenticación simplificado
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('🔍 authenticateToken: Iniciando para ruta:', req.path)
+    
     const authHeader = req.headers.authorization
-    const token = authHeader && authHeader.split(" ")[1] // Bearer TOKEN
-
-    console.log("authenticateToken: Token recibido:", !!token)
+    const token = authHeader && authHeader.split(" ")[1]
 
     if (!token) {
-      console.log("authenticateToken: No hay token")
+      console.log('❌ authenticateToken: No hay token')
       res.status(401).json({
         errors: [{ field: "auth", message: "Token de acceso requerido" }],
       })
       return
     }
 
+    console.log('🔍 authenticateToken: Token encontrado, verificando...')
     const decoded = verifyToken(token)
-    console.log("authenticateToken: Token decodificado:", decoded)
-    console.log("authenticateToken: Tipo de userId:", typeof decoded.userId, "Valor:", decoded.userId)
-
-    // Validar que el userId exista
-    if (!decoded.userId) {
-      console.log("authenticateToken: userId no existe en token")
-      res.status(401).json({
-        errors: [{ field: "auth", message: "Token inválido - ID de usuario faltante" }],
-      })
-      return
-    }
-
-    // Convertir userId a número de manera segura
-    let userId: number
-    try {
-      userId = parseInt(String(decoded.userId), 10)
-      if (isNaN(userId) || userId <= 0) {
-        throw new Error("userId inválido")
-      }
-    } catch (error) {
-      console.log("authenticateToken: Error al convertir userId:", decoded.userId, error)
-      res.status(401).json({
-        errors: [{ field: "auth", message: "Token inválido - ID de usuario inválido" }],
-      })
-      return
-    }
-
-    console.log("authenticateToken: userId convertido exitosamente:", userId)
-
-    // Verificar que el usuario aún existe y está activo
-    const usuario = await obtenerUsuarioPorId(userId)
-    console.log("authenticateToken: Usuario encontrado:", !!usuario)
-
+    console.log('🔍 authenticateToken: Token verificado, userId:', decoded.userId)
+    
+    // Validar que el usuario existe y está activo
+    const usuario = await obtenerUsuarioPorId(decoded.userId)
+    console.log('🔍 authenticateToken: Usuario obtenido:', !!usuario, 'Activo:', usuario?.activo)
+    
     if (!usuario || !usuario.activo) {
-      console.log("authenticateToken: Usuario no válido o inactivo")
+      console.log('❌ authenticateToken: Usuario no válido o inactivo')
       res.status(401).json({
         errors: [{ field: "auth", message: "Token inválido o usuario desactivado" }],
       })
@@ -75,10 +49,10 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
 
     req.usuario = decoded
-    console.log("authenticateToken: Usuario autenticado exitosamente")
+    console.log('✅ authenticateToken: Usuario autenticado exitosamente')
     next()
   } catch (error: any) {
-    console.error("Error en autenticación:", error)
+    console.error("❌ Error en autenticación:", error)
     res.status(401).json({
       errors: [{ field: "auth", message: "Token inválido" }],
     })

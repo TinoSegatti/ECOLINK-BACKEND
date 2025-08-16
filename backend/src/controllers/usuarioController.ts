@@ -3,10 +3,12 @@ import * as usuarioService from '../services/usuarioService'
 
 export const obtenerUsuarios = async (req: Request, res: Response) => {
   try {
+    console.log('🔍 obtenerUsuarios: Iniciando...')
     const usuarios = await usuarioService.obtenerUsuarios()
+    console.log('🔍 obtenerUsuarios: Usuarios obtenidos:', usuarios.length)
     res.json(usuarios)
   } catch (error) {
-    console.error('Error al obtener usuarios:', error)
+    console.error('❌ Error al obtener usuarios:', error)
     res.status(500).json({ error: 'Error interno del servidor' })
   }
 }
@@ -137,10 +139,12 @@ export const cambiarEstadoUsuario = async (req: Request, res: Response) => {
 
 export const obtenerEstadisticasUsuarios = async (req: Request, res: Response) => {
   try {
+    console.log('🔍 obtenerEstadisticasUsuarios: Iniciando...')
     const estadisticas = await usuarioService.obtenerEstadisticasUsuarios()
+    console.log('🔍 obtenerEstadisticasUsuarios: Estadísticas obtenidas:', estadisticas)
     res.json(estadisticas)
   } catch (error) {
-    console.error('Error al obtener estadísticas de usuarios:', error)
+    console.error('❌ Error al obtener estadísticas de usuarios:', error)
     res.status(500).json({ error: 'Error interno del servidor' })
   }
 }
