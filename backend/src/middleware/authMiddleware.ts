@@ -35,8 +35,19 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     const decoded = verifyToken(token)
     console.log("authenticateToken: Token decodificado:", decoded)
 
+    // Validar que el userId sea un número válido
+    if (!decoded.userId || isNaN(Number(decoded.userId))) {
+      console.log("authenticateToken: userId inválido en token:", decoded.userId)
+      res.status(401).json({
+        errors: [{ field: "auth", message: "Token inválido - ID de usuario inválido" }],
+      })
+      return
+    }
+
+    const userId = Number(decoded.userId)
+
     // Verificar que el usuario aún existe y está activo
-    const usuario = await obtenerUsuarioPorId(decoded.userId)
+    const usuario = await obtenerUsuarioPorId(userId)
     console.log("authenticateToken: Usuario encontrado:", !!usuario)
 
     if (!usuario || !usuario.activo) {
