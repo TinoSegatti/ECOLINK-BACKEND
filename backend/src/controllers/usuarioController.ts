@@ -4,7 +4,8 @@ import * as usuarioService from '../services/usuarioService'
 export const obtenerUsuarios = async (req: Request, res: Response) => {
   try {
     console.log('🔍 obtenerUsuarios: Iniciando...')
-    const usuarios = await usuarioService.obtenerUsuarios()
+    const excludeId = (req as any).usuario?.userId as number | undefined
+    const usuarios = await usuarioService.obtenerUsuarios(excludeId)
     console.log('🔍 obtenerUsuarios: Usuarios obtenidos:', usuarios.length)
     res.json(usuarios)
   } catch (error) {
@@ -94,6 +95,13 @@ export const eliminarUsuario = async (req: Request, res: Response) => {
 
     if (isNaN(usuarioId)) {
       res.status(400).json({ error: 'ID de usuario inválido' })
+      return
+    }
+
+    // Evitar que un usuario elimine su propia cuenta
+    const currentUserId = (req as any).usuario?.userId as number | undefined
+    if (currentUserId && currentUserId === usuarioId) {
+      res.status(400).json({ error: 'No puedes eliminar tu propia cuenta mientras la sesión está activa' })
       return
     }
 

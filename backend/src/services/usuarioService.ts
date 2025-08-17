@@ -28,9 +28,10 @@ export interface ActualizarUsuarioData {
 }
 
 // Obtener todos los usuarios (sin contraseñas)
-export const obtenerUsuarios = async (): Promise<UsuarioSinPassword[]> => {
+export const obtenerUsuarios = async (excludeUserId?: number): Promise<UsuarioSinPassword[]> => {
   try {
     const usuarios = await prisma.usuario.findMany({
+      where: excludeUserId ? { id: { not: excludeUserId } } : undefined,
       select: {
         id: true,
         email: true,
