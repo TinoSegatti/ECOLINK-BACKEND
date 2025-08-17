@@ -7,18 +7,14 @@ const express_1 = __importDefault(require("express"));
 const usuarioController_1 = require("../controllers/usuarioController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = express_1.default.Router();
-// Obtener todos los usuarios (solo admin)
+// Rutas específicas primero (sin parámetros)
 router.get('/', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.obtenerUsuarios);
-// Obtener estadísticas de usuarios (solo admin)
 router.get('/estadisticas', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.obtenerEstadisticasUsuarios);
-// Obtener usuario por ID (solo admin)
+// Rutas con parámetros después
 router.get('/:id', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.obtenerUsuarioPorId);
-// Crear nuevo usuario (solo admin)
-router.post('/', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.crearUsuario);
-// Actualizar usuario (solo admin)
 router.put('/:id', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.actualizarUsuario);
-// Cambiar estado activo/inactivo del usuario (solo admin)
 router.patch('/:id/estado', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.cambiarEstadoUsuario);
-// Eliminar usuario (solo admin)
 router.delete('/:id', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.eliminarUsuario);
+// Rutas POST
+router.post('/', authMiddleware_1.authenticateToken, authMiddleware_1.requireAdmin, usuarioController_1.crearUsuario);
 exports.default = router;

@@ -32,7 +32,7 @@ console.log("🚀 Configurando rutas...");
 app.use("/api", authRoutes_1.default); // Rutas de autenticación
 app.use("/api", clienteRoutes_1.default);
 app.use("/api", categoriaRoutes_1.default);
-app.use("/api", usuarioRoutes_1.default);
+app.use("/api/usuarios", usuarioRoutes_1.default);
 // Ruta de prueba para verificar que el servidor está funcionando
 app.get("/", (req, res) => {
     res.json({
@@ -82,7 +82,7 @@ app.use((req, res) => {
 // Middleware
 app.use((0, cors_1.default)({
     origin: [
-        process.env.FRONTEND_URL || 'https://ecolink-frontend-desarrollo.vercel.app',
+        process.env.FRONTEND_URL || 'https://ecolink-frontend-produccion.vercel.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

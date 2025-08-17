@@ -37,11 +37,14 @@ exports.obtenerEstadisticasUsuarios = exports.cambiarEstadoUsuario = exports.eli
 const usuarioService = __importStar(require("../services/usuarioService"));
 const obtenerUsuarios = async (req, res) => {
     try {
-        const usuarios = await usuarioService.obtenerUsuarios();
+        console.log('🔍 obtenerUsuarios: Iniciando...');
+        const excludeId = req.usuario?.userId;
+        const usuarios = await usuarioService.obtenerUsuarios(excludeId);
+        console.log('🔍 obtenerUsuarios: Usuarios obtenidos:', usuarios.length);
         res.json(usuarios);
     }
     catch (error) {
-        console.error('Error al obtener usuarios:', error);
+        console.error('❌ Error al obtener usuarios:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
@@ -124,6 +127,12 @@ const eliminarUsuario = async (req, res) => {
             res.status(400).json({ error: 'ID de usuario inválido' });
             return;
         }
+        // Evitar que un usuario elimine su propia cuenta
+        const currentUserId = req.usuario?.userId;
+        if (currentUserId && currentUserId === usuarioId) {
+            res.status(400).json({ error: 'No puedes eliminar tu propia cuenta mientras la sesión está activa' });
+            return;
+        }
         await usuarioService.eliminarUsuario(usuarioId);
         res.json({ message: 'Usuario eliminado exitosamente' });
     }
@@ -167,11 +176,13 @@ const cambiarEstadoUsuario = async (req, res) => {
 exports.cambiarEstadoUsuario = cambiarEstadoUsuario;
 const obtenerEstadisticasUsuarios = async (req, res) => {
     try {
+        console.log('🔍 obtenerEstadisticasUsuarios: Iniciando...');
         const estadisticas = await usuarioService.obtenerEstadisticasUsuarios();
+        console.log('🔍 obtenerEstadisticasUsuarios: Estadísticas obtenidas:', estadisticas);
         res.json(estadisticas);
     }
     catch (error) {
-        console.error('Error al obtener estadísticas de usuarios:', error);
+        console.error('❌ Error al obtener estadísticas de usuarios:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };

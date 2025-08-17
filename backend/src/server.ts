@@ -90,7 +90,7 @@ app.use((req: express.Request, res: express.Response) => {
 // Middleware
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || 'https://ecolink-frontend-desarrollo.vercel.app',
+    process.env.FRONTEND_URL || 'https://ecolink-frontend-desarrollo.vercel.app' || 'https://ecolink-frontend-produccion.vercel.app',
     
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

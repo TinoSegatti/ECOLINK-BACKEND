@@ -54,7 +54,7 @@ const enviarEmailVerificacion = async (email, nombre, token) => {
     try {
         console.log(`📧 Preparando email de verificación para: ${email}`);
         const transporter = createTransport();
-        const verificationUrl = `${process.env.FRONTEND_URL || "http://localhost:3001"}/verificar-email?token=${token}`;
+        const verificationUrl = `${process.env.FRONTEND_URL || "https://ecolink-frontend-produccion.vercel.app"}/verificar-email?token=${token}`;
         console.log(`🔗 URL de verificación generada: ${verificationUrl}`);
         const mailOptions = {
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -442,7 +442,7 @@ const enviarEmailRestablecimiento = async (email, nombre, token) => {
     try {
         console.log(`📧 Preparando email de restablecimiento para: ${email}`);
         const transporter = createTransport();
-        const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3001"}/reset-password?token=${token}`;
+        const resetUrl = `${process.env.FRONTEND_URL || "https://ecolink-frontend-produccion.vercel.app"}/reset-password?token=${token}`;
         console.log(`🔗 URL de restablecimiento generada: ${resetUrl}`);
         const mailOptions = {
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -609,7 +609,7 @@ const enviarEmailVerificacionSolicitud = async (email, nombre, token) => {
     try {
         console.log(`📧 Preparando email de verificación de solicitud para: ${email}`);
         const transporter = createTransport();
-        const verificationUrl = `${process.env.FRONTEND_URL || "http://localhost:3001"}/verificar-solicitud?token=${token}`;
+        const verificationUrl = `${process.env.FRONTEND_URL || "https://ecolink-frontend-produccion.vercel.app"}/verificar-solicitud?token=${token}`;
         console.log(`🔗 URL de verificación de solicitud generada: ${verificationUrl}`);
         const mailOptions = {
             from: process.env.SMTP_FROM || process.env.SMTP_USER,

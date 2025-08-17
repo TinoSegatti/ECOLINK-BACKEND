@@ -4,9 +4,10 @@ exports.obtenerEstadisticasUsuarios = exports.cambiarEstadoUsuario = exports.eli
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 // Obtener todos los usuarios (sin contraseñas)
-const obtenerUsuarios = async () => {
+const obtenerUsuarios = async (excludeUserId) => {
     try {
         const usuarios = await prisma.usuario.findMany({
+            where: excludeUserId ? { id: { not: excludeUserId } } : undefined,
             select: {
                 id: true,
                 email: true,
