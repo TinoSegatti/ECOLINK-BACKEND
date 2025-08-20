@@ -170,17 +170,19 @@ export const crearSolicitudRegistro = async (data: RegisterData): Promise<Solici
       throw new Error("Ya existe un usuario registrado con este email")
     }
 
-    // Verificar que no exista ya una solicitud pendiente
-    const solicitudExistente = await prisma.solicitudRegistro.findFirst({
-      where: {
-        email: data.email,
-        aprobada: false,
-        rechazada: false,
-      },
+    // Verificar que no exista YA NINGUNA solicitud con ese email (pendiente, aprobada o rechazada)
+    const solicitudExistente = await prisma.solicitudRegistro.findUnique({
+      where: { email: data.email },
     })
 
     if (solicitudExistente) {
-      throw new Error("Ya existe una solicitud pendiente para este email")
+      if (solicitudExistente.aprobada) {
+        throw new Error("Ya existe una solicitud aprobada para este email. Contacta al administrador.")
+      } else if (solicitudExistente.rechazada) {
+        throw new Error("Ya existe una solicitud rechazada para este email. Contacta al administrador.")
+      } else {
+        throw new Error("Ya existe una solicitud pendiente para este email")
+      }
     }
 
     // Generar token de verificación
@@ -683,7 +685,7 @@ export const verificarEmailSolicitud = async (
       where: { id: solicitud.id },
       data: {
         emailVerificado: true,
-        tokenVerificacion: "", // Limpiar token ya usado (usar string vacío para evitar error de tipo)
+        tokenVerificacion: null, // Limpiar token ya usado (null es más apropiado para tokens usados)
       },
     });
 

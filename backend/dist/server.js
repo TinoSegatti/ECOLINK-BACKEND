@@ -82,7 +82,7 @@ app.use((req, res) => {
 // Middleware
 app.use((0, cors_1.default)({
     origin: [
-        process.env.FRONTEND_URL || 'https://ecolink-frontend-produccion.vercel.app',
+        process.env.FRONTEND_URL || 'https://ecolink-frontend-desarrollo.vercel.app' || 'https://ecolink-frontend-produccion.vercel.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -96,3 +96,4 @@ app.listen(PORT, () => {
     console.log(`   GET  http://localhost:${PORT}/api/routes`);
     console.log(`   GET  http://localhost:${PORT}/api/auth/test`);
 });
+//commit para produccion
