@@ -216,7 +216,14 @@ export const crearSolicitudRegistro = async (data: RegisterData): Promise<Solici
 // Obtener solicitudes pendientes (solo para ADMIN)
 export const obtenerSolicitudesPendientes = async (): Promise<SolicitudRegistro[]> => {
   try {
-    console.log("Buscando solicitudes pendientes en la base de datos...")
+    console.log("🔍 Buscando solicitudes pendientes en la base de datos...")
+    
+    // Buscar todas las solicitudes para debug
+    const todasLasSolicitudes = await prisma.solicitudRegistro.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    console.log("📊 Total de solicitudes en BD:", todasLasSolicitudes.length);
+    
     const solicitudes = await prisma.solicitudRegistro.findMany({
       where: {
         aprobada: false,
@@ -224,10 +231,22 @@ export const obtenerSolicitudesPendientes = async (): Promise<SolicitudRegistro[
       },
       orderBy: { createdAt: "desc" },
     })
-    console.log("Solicitudes encontradas:", solicitudes.length)
+    
+    console.log("✅ Solicitudes pendientes encontradas:", solicitudes.length);
+    console.log("📋 Detalles de solicitudes pendientes:", solicitudes.map(s => ({
+      id: s.id,
+      email: s.email,
+      nombre: s.nombre,
+      rol: s.rol,
+      emailVerificado: s.emailVerificado,
+      aprobada: s.aprobada,
+      rechazada: s.rechazada,
+      createdAt: s.createdAt
+    })));
+    
     return solicitudes
   } catch (error: any) {
-    console.error("Error al obtener solicitudes:", error)
+    console.error("❌ Error al obtener solicitudes:", error)
     throw error
   }
 }
@@ -667,6 +686,14 @@ export const verificarEmailSolicitud = async (
   try {
     console.log(`🔍 Verificando token de solicitud: ${token}`);
 
+    // Buscar todas las solicitudes con este token para debug
+    const todasLasSolicitudes = await prisma.solicitudRegistro.findMany({
+      where: {
+        tokenVerificacion: token,
+      },
+    });
+    console.log(`🔍 Solicitudes encontradas con este token:`, todasLasSolicitudes.length);
+
     const solicitud = await prisma.solicitudRegistro.findFirst({
       where: {
         tokenVerificacion: token,
@@ -676,7 +703,26 @@ export const verificarEmailSolicitud = async (
     });
 
     if (!solicitud) {
-      throw new Error("Token de verificación inválido o solicitud ya procesada");
+      // Buscar si existe una solicitud con este token pero ya procesada
+      const solicitudProcesada = await prisma.solicitudRegistro.findFirst({
+        where: {
+          tokenVerificacion: token,
+        },
+      });
+      
+      if (solicitudProcesada) {
+        console.log(`❌ Solicitud encontrada pero ya procesada:`, {
+          id: solicitudProcesada.id,
+          email: solicitudProcesada.email,
+          aprobada: solicitudProcesada.aprobada,
+          rechazada: solicitudProcesada.rechazada,
+          emailVerificado: solicitudProcesada.emailVerificado,
+        });
+        throw new Error("Solicitud ya procesada");
+      } else {
+        console.log(`❌ No se encontró solicitud con este token: ${token}`);
+        throw new Error("Token de verificación inválido");
+      }
     }
 
     console.log(`✅ Solicitud encontrada, marcando email como verificado`);
@@ -685,7 +731,7 @@ export const verificarEmailSolicitud = async (
       where: { id: solicitud.id },
       data: {
         emailVerificado: true,
-        tokenVerificacion: null, // Limpiar token ya usado (null es más apropiado para tokens usados)
+        // NO limpiar el tokenVerificacion aquí - se mantiene hasta que se apruebe/rechace la solicitud
       },
     });
 
