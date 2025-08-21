@@ -150,12 +150,27 @@ export const reenviarVerificacionHandler = async (req: Request, res: Response): 
 
 export const obtenerSolicitudesHandler = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("obtenerSolicitudesHandler: Usuario autenticado:", (req as any).usuario)
+    console.log("🔍 obtenerSolicitudesHandler: Usuario autenticado:", (req as any).usuario)
+    
     const solicitudes = await obtenerSolicitudesPendientes()
-    console.log("Solicitudes encontradas:", solicitudes.length)
+    console.log("📊 Solicitudes obtenidas del servicio:", solicitudes.length)
+    
+    // Log de la respuesta que se envía al frontend
+    console.log("📤 Enviando respuesta al frontend:", {
+      status: 200,
+      count: solicitudes.length,
+      data: solicitudes.map(s => ({
+        id: s.id,
+        email: s.email,
+        nombre: s.nombre,
+        rol: s.rol,
+        emailVerificado: s.emailVerificado
+      }))
+    });
+    
     res.json(solicitudes)
   } catch (error: any) {
-    console.error("Error al obtener solicitudes:", error)
+    console.error("❌ Error al obtener solicitudes:", error)
     res.status(500).json({
       errors: [{ field: "general", message: "Error interno del servidor" }],
     })
