@@ -70,8 +70,10 @@ export const registroHandler = async (req: Request, res: Response): Promise<void
 
     const solicitud = await crearSolicitudRegistro({ email, nombre, rol })
     res.status(201).json({
-      message: "Solicitud de registro creada. Espera la aprobación del administrador.",
+      message: "Solicitud de registro creada exitosamente. Revisa tu correo electrónico para verificar tu email. Una vez verificado, espera la aprobación del administrador.",
       solicitudId: solicitud.id,
+      email: solicitud.email,
+      nota: "Si no recibes el email de verificación, contacta al administrador para que pueda aprobar tu solicitud manualmente.",
     })
   } catch (error: any) {
     console.error("Error en registro:", error)

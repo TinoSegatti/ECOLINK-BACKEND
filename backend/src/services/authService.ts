@@ -219,15 +219,19 @@ export const crearSolicitudRegistro = async (data: RegisterData): Promise<Solici
       },
     })
 
-    // ENVIAR EMAIL DE VERIFICACIÓN INMEDIATAMENTE
-    try {
-      await enviarEmailVerificacionSolicitud(data.email, data.nombre, tokenVerificacion)
-      console.log(`📧 Email de verificación de solicitud enviado a: ${data.email}`)
-    } catch (emailError) {
-      console.error("❌ Error al enviar email de verificación de solicitud:", emailError)
-      // No lanzar error aquí, solo loguear. La solicitud se creó correctamente
-    }
+    // ENVIAR EMAIL DE VERIFICACIÓN DE FORMA ASÍNCRONA (no bloquea el proceso)
+    // Fire and forget: el email se envía en segundo plano sin bloquear la respuesta
+    enviarEmailVerificacionSolicitud(data.email, data.nombre, tokenVerificacion)
+      .then(() => {
+        console.log(`✅ Email de verificación de solicitud enviado exitosamente a: ${data.email}`)
+      })
+      .catch((emailError) => {
+        console.error("⚠️  Error al enviar email de verificación de solicitud (no crítico):", emailError)
+        console.log("ℹ️  La solicitud se creó correctamente. El administrador puede aprobar la solicitud y el usuario puede verificar su email más tarde.")
+        // El error de email NO afecta la creación de la solicitud
+      })
 
+    console.log(`✅ Solicitud de registro creada exitosamente (ID: ${solicitud.id})`)
     return solicitud
   } catch (error: any) {
     console.error("Error al crear solicitud:", error)
