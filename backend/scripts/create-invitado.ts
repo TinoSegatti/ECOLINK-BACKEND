@@ -32,7 +32,7 @@ async function createInvitado() {
     if (usuarioExistente) {
       console.log('✅ El usuario invitado ya existe. Actualizando contraseña...')
       
-      const hashedPassword = await bcrypt.hash('Invitado2024!', 10)
+      const hashedPassword = await bcrypt.hash('Invitado2025', 10)
       
       await prisma.usuario.update({
         where: { email: 'invitado@ecolink.com' },
@@ -46,7 +46,7 @@ async function createInvitado() {
       
       console.log('✅ Usuario invitado actualizado exitosamente')
       console.log('📧 Email: invitado@ecolink.com')
-      console.log('🔑 Contraseña: Invitado2024!')
+      console.log('🔑 Contraseña: Invitado2025')
       return
     }
 
