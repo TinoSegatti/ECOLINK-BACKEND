@@ -28,7 +28,8 @@ const createTransport = () => {
   const port = Number.parseInt(process.env.SMTP_PORT || "587")
   const isSecure = port === 465
 
-  const smtpConfig: nodemailer.TransportOptions = {
+  // Usar tipo any para evitar problemas de tipado con TransportOptions
+  const smtpConfig: any = {
     host: process.env.SMTP_HOST,
     port: port,
     secure: isSecure, // true para puerto 465, false para otros puertos
