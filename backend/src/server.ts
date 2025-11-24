@@ -4,6 +4,7 @@ import clienteRoutes from "./routes/clienteRoutes"
 import categoriaRoutes from "./routes/categoriaRoutes"
 import authRoutes from "./routes/authRoutes"
 import usuarioRoutes from "./routes/usuarioRoutes"
+import invitadoRoutes from "./routes/invitadoRoutes"
 import cors from "cors"
 import dotenv from "dotenv"
 
@@ -34,17 +35,19 @@ app.use("/api", authRoutes) // Rutas de autenticación
 app.use("/api", clienteRoutes)
 app.use("/api", categoriaRoutes)
 app.use("/api/usuarios", usuarioRoutes)
+app.use("/api/invitado", invitadoRoutes) // Ruta para crear usuario invitado
 
 // Ruta de prueba para verificar que el servidor está funcionando
 app.get("/", (req, res) => {
   res.json({
     message: "¡Bienvenido a la API de gestión de clientes!",
     timestamp: new Date().toISOString(),
-    routes: {
+      routes: {
       auth: "/api/auth/*",
       clientes: "/api/clientes",
       categorias: "/api/categorias",
       usuarios: "/api/usuarios",
+      invitado: "/api/invitado/crear-invitado",
     },
   })
 })
