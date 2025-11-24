@@ -40,6 +40,13 @@ export const obtenerUsuarioPorId = async (req: Request, res: Response) => {
 
 export const crearUsuario = async (req: Request, res: Response) => {
   try {
+    // Verificar si el usuario es el invitado
+    const currentUserEmail = (req as any).usuario?.email
+    if (currentUserEmail === 'invitado@ecolink.com') {
+      res.status(403).json({ error: 'El usuario invitado no puede crear nuevos usuarios' })
+      return
+    }
+
     const { email, nombre, rol, password } = req.body
 
     if (!email || !nombre || !rol || !password) {
@@ -67,6 +74,13 @@ export const crearUsuario = async (req: Request, res: Response) => {
 
 export const actualizarUsuario = async (req: Request, res: Response) => {
   try {
+    // Verificar si el usuario es el invitado
+    const currentUserEmail = (req as any).usuario?.email
+    if (currentUserEmail === 'invitado@ecolink.com') {
+      res.status(403).json({ error: 'El usuario invitado no puede modificar usuarios' })
+      return
+    }
+
     const { id } = req.params
     const usuarioId = parseInt(id)
     const datosActualizacion = req.body
@@ -90,6 +104,13 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
 
 export const eliminarUsuario = async (req: Request, res: Response) => {
   try {
+    // Verificar si el usuario es el invitado
+    const currentUserEmail = (req as any).usuario?.email
+    if (currentUserEmail === 'invitado@ecolink.com') {
+      res.status(403).json({ error: 'El usuario invitado no puede eliminar usuarios' })
+      return
+    }
+
     const { id } = req.params
     const usuarioId = parseInt(id)
 
