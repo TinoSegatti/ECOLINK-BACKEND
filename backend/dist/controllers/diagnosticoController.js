@@ -9,6 +9,11 @@ const dns_1 = __importDefault(require("dns"));
 const util_1 = require("util");
 const dnsLookup = (0, util_1.promisify)(dns_1.default.lookup);
 const testSMTPHandler = async (req, res) => {
+    console.log(`🔍 [DIAGNOSTICO] Handler llamado - Método: ${req.method}, Path: ${req.path}`);
+    console.log(`🔍 [DIAGNOSTICO] Headers:`, {
+        authorization: req.headers.authorization ? "presente" : "ausente",
+        "content-type": req.headers["content-type"],
+    });
     const resultados = {
         timestamp: new Date().toISOString(),
         pasos: [],

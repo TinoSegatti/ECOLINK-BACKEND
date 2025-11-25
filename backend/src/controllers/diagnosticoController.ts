@@ -6,6 +6,12 @@ import { promisify } from "util"
 const dnsLookup = promisify(dns.lookup)
 
 export const testSMTPHandler = async (req: Request, res: Response): Promise<void> => {
+  console.log(`🔍 [DIAGNOSTICO] Handler llamado - Método: ${req.method}, Path: ${req.path}`)
+  console.log(`🔍 [DIAGNOSTICO] Headers:`, {
+    authorization: req.headers.authorization ? "presente" : "ausente",
+    "content-type": req.headers["content-type"],
+  })
+
   const resultados: any = {
     timestamp: new Date().toISOString(),
     pasos: [],

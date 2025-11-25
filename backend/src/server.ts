@@ -32,12 +32,13 @@ app.use((req, res, next) => {
 
 // Conectar las rutas bajo el prefijo /api
 console.log("🚀 Configurando rutas...")
+// IMPORTANTE: Las rutas de diagnóstico deben ir ANTES de otras rutas que puedan interceptar
+app.use("/api/diagnostico", diagnosticoRoutes) // Rutas de diagnóstico (PÚBLICAS)
 app.use("/api", authRoutes) // Rutas de autenticación
 app.use("/api", clienteRoutes)
 app.use("/api", categoriaRoutes)
 app.use("/api/usuarios", usuarioRoutes)
 app.use("/api/invitado", invitadoRoutes) // Ruta para crear usuario invitado
-app.use("/api/diagnostico", diagnosticoRoutes) // Rutas de diagnóstico
 
 // Ruta de prueba para verificar que el servidor está funcionando
 app.get("/", (req, res) => {
