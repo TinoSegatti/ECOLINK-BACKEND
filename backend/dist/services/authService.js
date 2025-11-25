@@ -25,10 +25,10 @@ const createTransport = () => {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
-        // Configuración de timeouts optimizada
-        connectionTimeout: isSendGrid ? 20000 : 30000, // SendGrid es más rápido
-        socketTimeout: isSendGrid ? 20000 : 30000,
-        greetingTimeout: isSendGrid ? 10000 : 15000,
+        // Configuración de timeouts aumentados para Render
+        connectionTimeout: isSendGrid ? 60000 : 30000, // 60 segundos para SendGrid desde Render
+        socketTimeout: isSendGrid ? 60000 : 30000,
+        greetingTimeout: isSendGrid ? 30000 : 15000, // 30 segundos para saludo inicial
         // Configuración TLS
         requireTLS: !isSecure, // Requerir TLS si no es conexión segura
         tls: {
@@ -46,6 +46,13 @@ const createTransport = () => {
         // Deshabilitar keepalive para evitar problemas de conexión
         disableFileAccess: true,
         disableUrlAccess: true,
+        // Configuración adicional para SendGrid desde Render
+        ...(isSendGrid && {
+            // Intentar conexión directa sin verificación previa
+            ignoreTLS: false,
+            // No requerir STARTTLS explícitamente (SendGrid lo maneja automáticamente)
+            requireTLS: true,
+        }),
     };
     console.log("🔧 Configuración SMTP:", {
         host: smtpConfig.host,
@@ -689,11 +696,13 @@ const enviarEmailVerificacionSolicitud = async (email, nombre, token) => {
         try {
             console.log(`📧 Preparando email de verificación de solicitud para: ${email} (Intento ${attempt}/${maxRetries})`);
             const transporter = createTransport();
-            // Verificar conexión antes de enviar con timeout más corto
+            // Verificar conexión antes de enviar (timeout aumentado para SendGrid desde Render)
             try {
+                const isSendGrid = process.env.SMTP_HOST?.includes('sendgrid.net');
+                const verifyTimeout = isSendGrid ? 60000 : 30000; // 60 segundos para SendGrid
                 console.log(`🔍 Verificando conexión SMTP a ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}...`);
                 const verifyPromise = transporter.verify();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout en verificación SMTP (30s)')), 30000));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout en verificación SMTP (${verifyTimeout / 1000}s)`)), verifyTimeout));
                 await Promise.race([verifyPromise, timeoutPromise]);
                 console.log(`✅ Conexión SMTP verificada exitosamente`);
             }
