@@ -15,6 +15,7 @@ const createTransport = () => {
     const port = Number.parseInt(process.env.SMTP_PORT || "587");
     const isSecure = port === 465;
     const host = process.env.SMTP_HOST || "smtp.gmail.com";
+    const isSendGrid = host.includes('sendgrid.net');
     // Usar tipo any para evitar problemas de tipado con TransportOptions
     const smtpConfig = {
         host: host,
@@ -24,24 +25,24 @@ const createTransport = () => {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
-        // Configuración de timeouts más cortos para detectar problemas más rápido
-        connectionTimeout: 30000, // 30 segundos para establecer conexión
-        socketTimeout: 30000, // 30 segundos para operaciones de socket
-        greetingTimeout: 15000, // 15 segundos para saludo inicial
-        // Configuración TLS explícita para Gmail
+        // Configuración de timeouts optimizada
+        connectionTimeout: isSendGrid ? 20000 : 30000, // SendGrid es más rápido
+        socketTimeout: isSendGrid ? 20000 : 30000,
+        greetingTimeout: isSendGrid ? 10000 : 15000,
+        // Configuración TLS
         requireTLS: !isSecure, // Requerir TLS si no es conexión segura
         tls: {
             // Rechazar certificados no autorizados por seguridad
             rejectUnauthorized: true,
             // MinVersion para TLS 1.2 (más seguro y compatible)
             minVersion: 'TLSv1.2',
-            // Ciphers permitidos para mejor compatibilidad
-            ciphers: 'SSLv3',
         },
         // Deshabilitar pool para evitar problemas de conexión persistente
         pool: false,
-        // Configuración adicional para Gmail desde Render
-        service: host.includes('gmail.com') ? 'gmail' : undefined,
+        // Configuración específica por servicio
+        service: host.includes('gmail.com') ? 'gmail' :
+            host.includes('sendgrid.net') ? undefined : // SendGrid no necesita service
+                undefined,
         // Deshabilitar keepalive para evitar problemas de conexión
         disableFileAccess: true,
         disableUrlAccess: true,
