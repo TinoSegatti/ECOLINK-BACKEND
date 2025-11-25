@@ -55,8 +55,10 @@ const registroHandler = async (req, res) => {
         }
         const solicitud = await (0, authService_1.crearSolicitudRegistro)({ email, nombre, rol });
         res.status(201).json({
-            message: "Solicitud de registro creada. Espera la aprobación del administrador.",
+            message: "Solicitud de registro creada exitosamente. Revisa tu correo electrónico para verificar tu email. Una vez verificado, espera la aprobación del administrador.",
             solicitudId: solicitud.id,
+            email: solicitud.email,
+            nota: "Si no recibes el email de verificación, contacta al administrador para que pueda aprobar tu solicitud manualmente.",
         });
     }
     catch (error) {
@@ -130,13 +132,25 @@ const reenviarVerificacionHandler = async (req, res) => {
 exports.reenviarVerificacionHandler = reenviarVerificacionHandler;
 const obtenerSolicitudesHandler = async (req, res) => {
     try {
-        console.log("obtenerSolicitudesHandler: Usuario autenticado:", req.usuario);
+        console.log("🔍 obtenerSolicitudesHandler: Usuario autenticado:", req.usuario);
         const solicitudes = await (0, authService_1.obtenerSolicitudesPendientes)();
-        console.log("Solicitudes encontradas:", solicitudes.length);
+        console.log("📊 Solicitudes obtenidas del servicio:", solicitudes.length);
+        // Log de la respuesta que se envía al frontend
+        console.log("📤 Enviando respuesta al frontend:", {
+            status: 200,
+            count: solicitudes.length,
+            data: solicitudes.map(s => ({
+                id: s.id,
+                email: s.email,
+                nombre: s.nombre,
+                rol: s.rol,
+                emailVerificado: s.emailVerificado
+            }))
+        });
         res.json(solicitudes);
     }
     catch (error) {
-        console.error("Error al obtener solicitudes:", error);
+        console.error("❌ Error al obtener solicitudes:", error);
         res.status(500).json({
             errors: [{ field: "general", message: "Error interno del servidor" }],
         });

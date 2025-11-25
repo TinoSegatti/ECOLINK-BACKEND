@@ -9,6 +9,8 @@ const clienteRoutes_1 = __importDefault(require("./routes/clienteRoutes"));
 const categoriaRoutes_1 = __importDefault(require("./routes/categoriaRoutes"));
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const usuarioRoutes_1 = __importDefault(require("./routes/usuarioRoutes"));
+const invitadoRoutes_1 = __importDefault(require("./routes/invitadoRoutes"));
+const diagnosticoRoutes_1 = __importDefault(require("./routes/diagnosticoRoutes"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 // Cargar variables de entorno desde .env
@@ -33,6 +35,8 @@ app.use("/api", authRoutes_1.default); // Rutas de autenticación
 app.use("/api", clienteRoutes_1.default);
 app.use("/api", categoriaRoutes_1.default);
 app.use("/api/usuarios", usuarioRoutes_1.default);
+app.use("/api/invitado", invitadoRoutes_1.default); // Ruta para crear usuario invitado
+app.use("/api/diagnostico", diagnosticoRoutes_1.default); // Rutas de diagnóstico
 // Ruta de prueba para verificar que el servidor está funcionando
 app.get("/", (req, res) => {
     res.json({
@@ -43,6 +47,8 @@ app.get("/", (req, res) => {
             clientes: "/api/clientes",
             categorias: "/api/categorias",
             usuarios: "/api/usuarios",
+            invitado: "/api/invitado/crear-invitado",
+            diagnostico: "/api/diagnostico/smtp",
         },
     });
 });

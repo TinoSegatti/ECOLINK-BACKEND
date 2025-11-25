@@ -10,25 +10,53 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const prisma = new client_1.PrismaClient();
-// Configurar nodemailer con validación mejorada
+// Configurar nodemailer con validación mejorada y timeouts
 const createTransport = () => {
+    const port = Number.parseInt(process.env.SMTP_PORT || "587");
+    const isSecure = port === 465;
+    const host = process.env.SMTP_HOST || "smtp.gmail.com";
+    // Usar tipo any para evitar problemas de tipado con TransportOptions
     const smtpConfig = {
-        host: process.env.SMTP_HOST,
-        port: Number.parseInt(process.env.SMTP_PORT || "587"),
-        secure: false, // true para puerto 465, false para otros puertos
+        host: host,
+        port: port,
+        secure: isSecure, // true para puerto 465, false para otros puertos
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
+        // Configuración de timeouts más cortos para detectar problemas más rápido
+        connectionTimeout: 30000, // 30 segundos para establecer conexión
+        socketTimeout: 30000, // 30 segundos para operaciones de socket
+        greetingTimeout: 15000, // 15 segundos para saludo inicial
+        // Configuración TLS explícita para Gmail
+        requireTLS: !isSecure, // Requerir TLS si no es conexión segura
+        tls: {
+            // Rechazar certificados no autorizados por seguridad
+            rejectUnauthorized: true,
+            // MinVersion para TLS 1.2 (más seguro y compatible)
+            minVersion: 'TLSv1.2',
+            // Ciphers permitidos para mejor compatibilidad
+            ciphers: 'SSLv3',
+        },
+        // Deshabilitar pool para evitar problemas de conexión persistente
+        pool: false,
+        // Configuración adicional para Gmail desde Render
+        service: host.includes('gmail.com') ? 'gmail' : undefined,
+        // Deshabilitar keepalive para evitar problemas de conexión
+        disableFileAccess: true,
+        disableUrlAccess: true,
     };
     console.log("🔧 Configuración SMTP:", {
         host: smtpConfig.host,
         port: smtpConfig.port,
-        user: smtpConfig.auth.user,
-        passConfigured: !!smtpConfig.auth.pass,
+        user: smtpConfig.auth?.user,
+        passConfigured: !!smtpConfig.auth?.pass,
+        secure: smtpConfig.secure,
+        connectionTimeout: smtpConfig.connectionTimeout,
+        requireTLS: smtpConfig.requireTLS,
     });
     // Validar que todas las variables estén configuradas
-    if (!smtpConfig.host || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
+    if (!smtpConfig.host || !smtpConfig.auth?.user || !smtpConfig.auth?.pass) {
         console.error("❌ Variables SMTP faltantes:");
         console.error("SMTP_HOST:", !!process.env.SMTP_HOST);
         console.error("SMTP_USER:", !!process.env.SMTP_USER);
@@ -165,15 +193,18 @@ const crearSolicitudRegistro = async (data) => {
                 tokenVerificacion,
             },
         });
-        // ENVIAR EMAIL DE VERIFICACIÓN INMEDIATAMENTE
-        try {
-            await enviarEmailVerificacionSolicitud(data.email, data.nombre, tokenVerificacion);
-            console.log(`📧 Email de verificación de solicitud enviado a: ${data.email}`);
-        }
-        catch (emailError) {
-            console.error("❌ Error al enviar email de verificación de solicitud:", emailError);
-            // No lanzar error aquí, solo loguear. La solicitud se creó correctamente
-        }
+        // ENVIAR EMAIL DE VERIFICACIÓN DE FORMA ASÍNCRONA (no bloquea el proceso)
+        // Fire and forget: el email se envía en segundo plano sin bloquear la respuesta
+        enviarEmailVerificacionSolicitud(data.email, data.nombre, tokenVerificacion)
+            .then(() => {
+            console.log(`✅ Email de verificación de solicitud enviado exitosamente a: ${data.email}`);
+        })
+            .catch((emailError) => {
+            console.error("⚠️  Error al enviar email de verificación de solicitud (no crítico):", emailError);
+            console.log("ℹ️  La solicitud se creó correctamente. El administrador puede aprobar la solicitud y el usuario puede verificar su email más tarde.");
+            // El error de email NO afecta la creación de la solicitud
+        });
+        console.log(`✅ Solicitud de registro creada exitosamente (ID: ${solicitud.id})`);
         return solicitud;
     }
     catch (error) {
@@ -185,7 +216,12 @@ exports.crearSolicitudRegistro = crearSolicitudRegistro;
 // Obtener solicitudes pendientes (solo para ADMIN)
 const obtenerSolicitudesPendientes = async () => {
     try {
-        console.log("Buscando solicitudes pendientes en la base de datos...");
+        console.log("🔍 Buscando solicitudes pendientes en la base de datos...");
+        // Buscar todas las solicitudes para debug
+        const todasLasSolicitudes = await prisma.solicitudRegistro.findMany({
+            orderBy: { createdAt: "desc" },
+        });
+        console.log("📊 Total de solicitudes en BD:", todasLasSolicitudes.length);
         const solicitudes = await prisma.solicitudRegistro.findMany({
             where: {
                 aprobada: false,
@@ -193,11 +229,21 @@ const obtenerSolicitudesPendientes = async () => {
             },
             orderBy: { createdAt: "desc" },
         });
-        console.log("Solicitudes encontradas:", solicitudes.length);
+        console.log("✅ Solicitudes pendientes encontradas:", solicitudes.length);
+        console.log("📋 Detalles de solicitudes pendientes:", solicitudes.map(s => ({
+            id: s.id,
+            email: s.email,
+            nombre: s.nombre,
+            rol: s.rol,
+            emailVerificado: s.emailVerificado,
+            aprobada: s.aprobada,
+            rechazada: s.rechazada,
+            createdAt: s.createdAt
+        })));
         return solicitudes;
     }
     catch (error) {
-        console.error("Error al obtener solicitudes:", error);
+        console.error("❌ Error al obtener solicitudes:", error);
         throw error;
     }
 };
@@ -574,6 +620,13 @@ exports.confirmarRestablecimientoContrasena = confirmarRestablecimientoContrasen
 const verificarEmailSolicitud = async (token) => {
     try {
         console.log(`🔍 Verificando token de solicitud: ${token}`);
+        // Buscar todas las solicitudes con este token para debug
+        const todasLasSolicitudes = await prisma.solicitudRegistro.findMany({
+            where: {
+                tokenVerificacion: token,
+            },
+        });
+        console.log(`🔍 Solicitudes encontradas con este token:`, todasLasSolicitudes.length);
         const solicitud = await prisma.solicitudRegistro.findFirst({
             where: {
                 tokenVerificacion: token,
@@ -582,14 +635,33 @@ const verificarEmailSolicitud = async (token) => {
             },
         });
         if (!solicitud) {
-            throw new Error("Token de verificación inválido o solicitud ya procesada");
+            // Buscar si existe una solicitud con este token pero ya procesada
+            const solicitudProcesada = await prisma.solicitudRegistro.findFirst({
+                where: {
+                    tokenVerificacion: token,
+                },
+            });
+            if (solicitudProcesada) {
+                console.log(`❌ Solicitud encontrada pero ya procesada:`, {
+                    id: solicitudProcesada.id,
+                    email: solicitudProcesada.email,
+                    aprobada: solicitudProcesada.aprobada,
+                    rechazada: solicitudProcesada.rechazada,
+                    emailVerificado: solicitudProcesada.emailVerificado,
+                });
+                throw new Error("Solicitud ya procesada");
+            }
+            else {
+                console.log(`❌ No se encontró solicitud con este token: ${token}`);
+                throw new Error("Token de verificación inválido");
+            }
         }
         console.log(`✅ Solicitud encontrada, marcando email como verificado`);
         const solicitudActualizada = await prisma.solicitudRegistro.update({
             where: { id: solicitud.id },
             data: {
                 emailVerificado: true,
-                tokenVerificacion: null, // Limpiar token ya usado (null es más apropiado para tokens usados)
+                // NO limpiar el tokenVerificacion aquí - se mantiene hasta que se apruebe/rechace la solicitud
             },
         });
         console.log(`✅ Email de solicitud verificado exitosamente:`, {
@@ -608,51 +680,97 @@ const verificarEmailSolicitud = async (token) => {
     }
 };
 exports.verificarEmailSolicitud = verificarEmailSolicitud;
-// NUEVA FUNCIÓN: Enviar email de verificación de solicitud
+// NUEVA FUNCIÓN: Enviar email de verificación de solicitud con reintentos
 const enviarEmailVerificacionSolicitud = async (email, nombre, token) => {
-    try {
-        console.log(`📧 Preparando email de verificación de solicitud para: ${email}`);
-        const transporter = createTransport();
-        const verificationUrl = `${process.env.FRONTEND_URL || "https://ecolink-frontend-produccion.vercel.app"}/verificar-solicitud?token=${token}`;
-        console.log(`🔗 URL de verificación de solicitud generada: ${verificationUrl}`);
-        const mailOptions = {
-            from: process.env.SMTP_FROM || process.env.SMTP_USER,
-            to: email,
-            subject: "Verificación de Solicitud de Registro - ECOLINK",
-            html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #7ac943;">¡Solicitud de Registro Recibida!</h2>
-          <p>Hola <strong>${nombre}</strong>,</p>
-          <p>Hemos recibido tu solicitud de registro en ECOLINK. Para continuar con el proceso, necesitas verificar tu dirección de correo electrónico.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" 
-               style="background-color: #7ac943; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px;">
-              Verificar mi Email
-            </a>
-          </div>
-          <p><strong>Importante:</strong> Este enlace expirará en 24 horas por seguridad.</p>
-          <p>Una vez verificado tu email, tu solicitud será revisada por un administrador quien te asignará una contraseña.</p>
-          <p>Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:</p>
-          <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-          <p style="color: #666; font-size: 12px;">
-            Si no solicitaste este registro, puedes ignorar este email.
-          </p>
-        </div>
-      `,
-        };
-        console.log(`📤 Enviando email de verificación de solicitud a: ${email}`);
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ Email de verificación de solicitud enviado exitosamente a: ${email}`);
-    }
-    catch (error) {
-        console.error("❌ Error detallado al enviar email de verificación de solicitud:", error);
-        if (error instanceof Error) {
-            if (error.message.includes("Missing credentials") || error.message.includes("EAUTH")) {
-                throw new Error("Error de configuración SMTP. Verifica las credenciales de email en las variables de entorno.");
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 segundos entre reintentos
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`📧 Preparando email de verificación de solicitud para: ${email} (Intento ${attempt}/${maxRetries})`);
+            const transporter = createTransport();
+            // Verificar conexión antes de enviar con timeout más corto
+            try {
+                console.log(`🔍 Verificando conexión SMTP a ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}...`);
+                const verifyPromise = transporter.verify();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout en verificación SMTP (30s)')), 30000));
+                await Promise.race([verifyPromise, timeoutPromise]);
+                console.log(`✅ Conexión SMTP verificada exitosamente`);
             }
-            throw new Error(`Error al enviar email: ${error.message}`);
+            catch (verifyError) {
+                const errorMsg = verifyError.message || String(verifyError);
+                console.error(`❌ Error al verificar conexión SMTP:`, errorMsg);
+                console.error(`📋 Detalles del error:`, {
+                    code: verifyError.code,
+                    command: verifyError.command,
+                    response: verifyError.response,
+                    responseCode: verifyError.responseCode,
+                });
+                // Diagnóstico adicional
+                if (errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT')) {
+                    console.error(`⚠️  Posibles causas del timeout:`);
+                    console.error(`   1. Render puede estar bloqueando conexiones salientes a Gmail`);
+                    console.error(`   2. Gmail puede estar bloqueando la IP de Render`);
+                    console.error(`   3. Firewall o restricciones de red en Render`);
+                    console.error(`   4. El App Password de Gmail puede estar incorrecto o expirado`);
+                }
+                if (attempt < maxRetries) {
+                    console.log(`⏳ Reintentando en ${retryDelay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    continue;
+                }
+                throw new Error(`No se pudo establecer conexión con el servidor SMTP: ${errorMsg}`);
+            }
+            const verificationUrl = `${process.env.FRONTEND_URL || "https://ecolink-frontend-produccion.vercel.app"}/verificar-solicitud?token=${token}`;
+            console.log(`🔗 URL de verificación de solicitud generada: ${verificationUrl}`);
+            const mailOptions = {
+                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                to: email,
+                subject: "Verificación de Solicitud de Registro - ECOLINK",
+                html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #7ac943;">¡Solicitud de Registro Recibida!</h2>
+            <p>Hola <strong>${nombre}</strong>,</p>
+            <p>Hemos recibido tu solicitud de registro en ECOLINK. Para continuar con el proceso, necesitas verificar tu dirección de correo electrónico.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}" 
+                 style="background-color: #7ac943; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px;">
+                Verificar mi Email
+              </a>
+            </div>
+            <p><strong>Importante:</strong> Este enlace expirará en 24 horas por seguridad.</p>
+            <p>Una vez verificado tu email, tu solicitud será revisada por un administrador quien te asignará una contraseña.</p>
+            <p>Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:</p>
+            <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            <p style="color: #666; font-size: 12px;">
+              Si no solicitaste este registro, puedes ignorar este email.
+            </p>
+          </div>
+        `,
+            };
+            console.log(`📤 Enviando email de verificación de solicitud a: ${email}`);
+            await transporter.sendMail(mailOptions);
+            console.log(`✅ Email de verificación de solicitud enviado exitosamente a: ${email}`);
+            return; // Éxito, salir de la función
         }
-        throw new Error("Error desconocido al enviar email de verificación de solicitud");
+        catch (error) {
+            console.error(`❌ Error detallado al enviar email de verificación de solicitud (Intento ${attempt}/${maxRetries}):`, error);
+            // Si es el último intento, lanzar el error
+            if (attempt === maxRetries) {
+                if (error instanceof Error) {
+                    if (error.message.includes("Missing credentials") || error.message.includes("EAUTH")) {
+                        throw new Error("Error de configuración SMTP. Verifica las credenciales de email en las variables de entorno.");
+                    }
+                    if (error.message.includes("ETIMEDOUT") || error.message.includes("timeout")) {
+                        throw new Error(`Error de conexión SMTP: Timeout al conectar con el servidor. Verifica que el servidor SMTP esté accesible y que las variables de entorno estén correctamente configuradas.`);
+                    }
+                    throw new Error(`Error al enviar email: ${error.message}`);
+                }
+                throw new Error("Error desconocido al enviar email de verificación de solicitud");
+            }
+            // Esperar antes del siguiente intento
+            console.log(`⏳ Reintentando en ${retryDelay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
     }
 };

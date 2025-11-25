@@ -27,20 +27,21 @@ export interface JWTPayload {
 const createTransport = () => {
   const port = Number.parseInt(process.env.SMTP_PORT || "587")
   const isSecure = port === 465
+  const host = process.env.SMTP_HOST || "smtp.gmail.com"
 
   // Usar tipo any para evitar problemas de tipado con TransportOptions
   const smtpConfig: any = {
-    host: process.env.SMTP_HOST,
+    host: host,
     port: port,
     secure: isSecure, // true para puerto 465, false para otros puertos
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Configuración de timeouts para evitar ETIMEDOUT
-    connectionTimeout: 60000, // 60 segundos para establecer conexión
-    socketTimeout: 60000, // 60 segundos para operaciones de socket
-    greetingTimeout: 30000, // 30 segundos para saludo inicial
+    // Configuración de timeouts más cortos para detectar problemas más rápido
+    connectionTimeout: 30000, // 30 segundos para establecer conexión
+    socketTimeout: 30000, // 30 segundos para operaciones de socket
+    greetingTimeout: 15000, // 15 segundos para saludo inicial
     // Configuración TLS explícita para Gmail
     requireTLS: !isSecure, // Requerir TLS si no es conexión segura
     tls: {
@@ -48,11 +49,16 @@ const createTransport = () => {
       rejectUnauthorized: true,
       // MinVersion para TLS 1.2 (más seguro y compatible)
       minVersion: 'TLSv1.2',
+      // Ciphers permitidos para mejor compatibilidad
+      ciphers: 'SSLv3',
     },
-    // Pool de conexiones para mejor rendimiento
-    pool: true,
-    maxConnections: 1,
-    maxMessages: 3,
+    // Deshabilitar pool para evitar problemas de conexión persistente
+    pool: false,
+    // Configuración adicional para Gmail desde Render
+    service: host.includes('gmail.com') ? 'gmail' : undefined,
+    // Deshabilitar keepalive para evitar problemas de conexión
+    disableFileAccess: true,
+    disableUrlAccess: true,
   }
 
   console.log("🔧 Configuración SMTP:", {
@@ -789,18 +795,40 @@ const enviarEmailVerificacionSolicitud = async (email: string, nombre: string, t
 
       const transporter = createTransport();
       
-      // Verificar conexión antes de enviar
+      // Verificar conexión antes de enviar con timeout más corto
       try {
-        await transporter.verify()
+        console.log(`🔍 Verificando conexión SMTP a ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}...`)
+        const verifyPromise = transporter.verify()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout en verificación SMTP (30s)')), 30000)
+        )
+        await Promise.race([verifyPromise, timeoutPromise])
         console.log(`✅ Conexión SMTP verificada exitosamente`)
       } catch (verifyError: any) {
-        console.error(`❌ Error al verificar conexión SMTP:`, verifyError.message)
+        const errorMsg = verifyError.message || String(verifyError)
+        console.error(`❌ Error al verificar conexión SMTP:`, errorMsg)
+        console.error(`📋 Detalles del error:`, {
+          code: verifyError.code,
+          command: verifyError.command,
+          response: verifyError.response,
+          responseCode: verifyError.responseCode,
+        })
+        
+        // Diagnóstico adicional
+        if (errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT')) {
+          console.error(`⚠️  Posibles causas del timeout:`)
+          console.error(`   1. Render puede estar bloqueando conexiones salientes a Gmail`)
+          console.error(`   2. Gmail puede estar bloqueando la IP de Render`)
+          console.error(`   3. Firewall o restricciones de red en Render`)
+          console.error(`   4. El App Password de Gmail puede estar incorrecto o expirado`)
+        }
+        
         if (attempt < maxRetries) {
           console.log(`⏳ Reintentando en ${retryDelay}ms...`)
           await new Promise(resolve => setTimeout(resolve, retryDelay))
           continue
         }
-        throw new Error(`No se pudo establecer conexión con el servidor SMTP: ${verifyError.message}`)
+        throw new Error(`No se pudo establecer conexión con el servidor SMTP: ${errorMsg}`)
       }
 
       const verificationUrl = `${process.env.FRONTEND_URL || "https://ecolink-frontend-produccion.vercel.app"}/verificar-solicitud?token=${token}`;

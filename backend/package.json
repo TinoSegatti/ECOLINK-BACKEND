@@ -10,7 +10,8 @@
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "create:invitado": "ts-node scripts/create-invitado.ts"
+    "create:invitado": "ts-node scripts/create-invitado.ts",
+    "test:smtp": "ts-node scripts/test-smtp.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
